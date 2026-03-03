@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - Le mystère du barrage</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins','Segoe UI',Roboto,sans-serif; }
+
+        html, body { width:100%; height:100%; overflow:hidden; }
+
+        body {
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .quiz-wrapper {
+            width: 1000px;
+            height: 600px;
+            background: rgba(26,47,78,0.85);
+            border-radius: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 4px solid rgba(255,255,255,0.8);
+        }
+
+        /* HEADER */
+        .quiz-header {
+            background: rgba(255,170,51,0.95);
+            padding: 0 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 4px solid white;
+            height: 60px;
+            flex-shrink: 0;
+        }
+        .quiz-header h1 { color:white; font-size:1.6rem; font-weight:800; display:flex; align-items:center; gap:10px; text-shadow:2px 2px 0 rgba(0,0,0,0.2); }
+        .player-badge { background:white; padding:6px 20px; border-radius:40px; font-weight:bold; color:#1a2f4e; box-shadow:0 4px 0 #b87c1f; font-size:0.95rem; }
+
+        /* MAIN */
+        .main-area { flex:1; display:flex; flex-direction:column; padding:15px 30px; overflow:hidden; }
+
+        /* PANELS */
+        .panel { display:none; width:100%; height:100%; animation:fadeIn 0.4s; }
+        .panel.active { display:flex; flex-direction:column; justify-content:center; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ===== ACCUEIL ===== */
+        .home-panel { text-align:center; align-items:center; color:white; }
+        .home-panel h2 { font-size:2.4rem; color:#ffaa33; margin-bottom:8px; font-weight:800; text-shadow:3px 3px 0 #b87c1f; }
+        .home-panel .subtitle { font-size:1.1rem; color:#e0e0e0; margin-bottom:22px; }
+        .input-group { background:rgba(255,255,255,0.15); padding:25px; border-radius:60px; width:480px; max-width:90%; border:3px solid white; margin:0 auto; }
+        .input-group input { width:100%; padding:12px 20px; font-size:1.1rem; border:4px solid #ffaa33; border-radius:50px; margin-bottom:15px; text-align:center; outline:none; transition:all 0.3s; }
+        .input-group input:focus { border-color:white; box-shadow:0 0 0 4px rgba(255,170,51,0.3); }
+        .btn-start { width:100%; padding:13px 25px; font-size:1.3rem; font-weight:bold; background:#ffaa33; color:#1a2f4e; border:4px solid white; border-radius:50px; cursor:pointer; box-shadow:0 5px 0 #b87c1f; transition:all 0.2s; }
+        .btn-start:hover { transform:translateY(-3px); box-shadow:0 8px 0 #b87c1f; }
+        .quiz-info { margin-top:18px; padding:8px 22px; background:rgba(255,255,255,0.1); border-radius:50px; font-size:1rem; color:#ffaa33; font-weight:600; border:2px solid rgba(255,170,51,0.3); }
+
+        /* ===== QUIZ ===== */
+        #quizPanel { position: relative; }
+
+        .quiz-top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:12px; }
+        .q-counter, .score-box, .player-box { padding:6px 16px; border-radius:40px; font-weight:bold; font-size:0.95rem; border:3px solid white; box-shadow:0 4px 0 #b87c1f; }
+        .q-counter { background:#ffaa33; color:#1a2f4e; }
+        .score-box, .player-box { background:white; color:#1a2f4e; }
+
+        /* Timer */
+        .timer-section { margin-bottom:10px; }
+        .timer-label { text-align:center; font-size:0.9rem; font-weight:600; color:white; margin-bottom:4px; }
+        .timer-bar-bg { width:100%; height:10px; background:rgba(255,255,255,0.3); border-radius:20px; overflow:hidden; border:2px solid white; }
+        .timer-fill { height:100%; width:100%; background:#ffaa33; transition:width 1s linear; border-radius:20px; }
+
+        /* Question */
+        .question-card { background:white; border-radius:25px; padding:14px 22px; margin-bottom:12px; box-shadow:0 6px 0 #b87c1f; border:4px solid #ffaa33; }
+        .question-card p { font-size:1.25rem; font-weight:700; color:#1a2f4e; line-height:1.4; }
+
+        /* Réponses */
+        .answers-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .answer-item { padding:12px 10px; border-radius:22px; font-size:0.95rem; font-weight:bold; text-align:center; cursor:pointer; border:4px solid white; box-shadow:0 5px 0 #1a3a4a; display:flex; align-items:center; justify-content:center; gap:8px; min-height:62px; transition:all 0.1s; color:white; }
+        .answer-item:hover:not(.disabled) { transform:translateY(-3px); box-shadow:0 8px 0 #1a3a4a; }
+        .answer-item.selected { transform:translateY(3px); box-shadow:0 2px 0 #1a3a4a; filter:brightness(1.2); }
+        .answer-item.disabled { opacity:0.5; pointer-events:none; }
+        .answer-item.correct { border-color:#2ecc71; box-shadow:0 5px 0 #27ae60; animation:pulse 0.5s; }
+        .answer-item.wrong { border-color:#e74c3c; box-shadow:0 5px 0 #c0392b; animation:shake 0.5s; }
+        .answer-a { background:#e63946; }
+        .answer-b { background:#3a86ff; }
+        .answer-c { background:#ffbe0b; color:#1a2f4e; }
+        .answer-d { background:#2a9d8f; }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+        .letter-badge { background:rgba(255,255,255,0.3); width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem; flex-shrink:0; }
+
+        /* Bouton valider */
+        .btn-validate { background:#ffaa33; color:#1a2f4e; padding:10px 30px; font-size:1.1rem; font-weight:bold; border:4px solid white; border-radius:50px; cursor:pointer; box-shadow:0 5px 0 #b87c1f; transition:all 0.2s; display:block; margin:12px auto 0; }
+        .btn-validate:hover:not(:disabled) { transform:translateY(-3px); box-shadow:0 8px 0 #b87c1f; }
+        .btn-validate:disabled { opacity:0.5; pointer-events:none; transform:translateY(2px); box-shadow:0 3px 0 #b87c1f; }
+
+        /* ===== FEEDBACK - OVERLAY ===== */
+        #feedbackZone {
+            position: absolute;
+            bottom: 0;
+            left: 30px;
+            right: 30px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .feedback-box {
+            border-radius: 22px;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 3px solid white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            animation: slideUp 0.35s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity:0; transform:translateY(20px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        .feedback-correct { background:#2a9d8f; color:white; }
+        .feedback-incorrect { background:#e63946; color:white; }
+        .feedback-timeout { background:#ffbe0b; color:#1a2f4e; }
+
+        .feedback-icon { font-size:2rem; flex-shrink:0; }
+        .feedback-content { text-align:left; }
+        .feedback-title { font-size:1.05rem; font-weight:800; margin-bottom:3px; }
+        .feedback-expl { font-size:0.88rem; opacity:0.92; line-height:1.4; }
+
+        /* ===== RÉSULTAT ===== */
+        .result-panel { justify-content:center; align-items:center; text-align:center; display:flex; }
+        .result-card { background:rgba(255,255,255,0.97); padding:28px; border-radius:50px; width:520px; max-width:92%; border:5px solid #ffaa33; box-shadow:0 10px 0 #b87c1f; position:relative; text-align:center; }
+        .result-title { font-size:1.8rem; color:#1a2f4e; margin-bottom:10px; font-weight:800; }
+        .big-score { font-size:4.5rem; font-weight:900; color:#ffaa33; text-shadow:4px 4px 0 #b87c1f; margin:8px 0; line-height:1; }
+        .total-points { font-size:1.2rem; color:#1a2f4e; margin-bottom:10px; font-weight:600; }
+        .grade-badge { display:inline-block; padding:10px 30px; border-radius:60px; font-size:1.5rem; font-weight:800; margin:10px 0; border:4px solid white; box-shadow:0 5px 0 #b87c1f; }
+        .grade-perfect { background:#ffaa33; color:#1a2f4e; }
+        .grade-excellent { background:#2a9d8f; color:white; }
+        .grade-good { background:#3a86ff; color:white; }
+        .grade-retry { background:#e63946; color:white; }
+        .result-message { font-size:1.1rem; color:#1a2f4e; margin:12px 0; line-height:1.5; }
+        .result-buttons { display:flex; justify-content:center; gap:14px; margin-top:14px; flex-wrap:wrap; }
+        .btn-restart { background:#ffaa33; color:#1a2f4e; padding:11px 35px; font-size:1.1rem; font-weight:bold; border:4px solid white; border-radius:60px; cursor:pointer; box-shadow:0 5px 0 #b87c1f; transition:all 0.2s; }
+        .btn-restart:hover { transform:translateY(-3px); box-shadow:0 8px 0 #b87c1f; }
+        .btn-next { background:#2a9d8f; color:white; padding:11px 35px; font-size:1.1rem; font-weight:bold; border:4px solid white; border-radius:60px; cursor:pointer; box-shadow:0 5px 0 #1a6b62; transition:all 0.2s; }
+        .btn-next:hover { transform:translateY(-3px); box-shadow:0 8px 0 #1a6b62; }
+
+        /* Confettis */
+        .confetti { position:absolute; width:8px; height:8px; animation:confetti-fall 3s linear infinite; border-radius:50%; }
+        @keyframes confetti-fall { 0%{transform:translateY(-100px) rotate(0deg);opacity:1} 100%{transform:translateY(400px) rotate(360deg);opacity:0} }
+    </style>
+</head>
+<body>
+<div class="quiz-wrapper">
+    <div class="quiz-header">
+        <h1><span>💧</span> Le mystère du barrage</h1>
+        <div class="player-badge" id="headerNameDisplay">Joueur</div>
+    </div>
+
+    <div class="main-area">
+
+        <!-- ACCUEIL -->
+        <div class="panel active" id="homePanel">
+            <div class="home-panel">
+                <h2>⚡ LA LUMIÈRE DE TIGHREMT ⚡</h2>
+                <p class="subtitle">Après avoir aidé Nada à réparer le barrage, teste tes connaissances !</p>
+                <div class="input-group">
+                    <input type="text" id="playerNameField" placeholder="Entre ton prénom" maxlength="20" value="Joueur">
+                    <button class="btn-start" id="startBtn">🎮 COMMENCER LE QUIZ</button>
+                </div>
+                <div class="quiz-info">📊 5 questions • ⏱️ 20s par question • 🏆 10 points chacune</div>
+            </div>
+        </div>
+
+        <!-- QUIZ -->
+        <div class="panel" id="quizPanel">
+            <div class="quiz-top-bar">
+                <div class="q-counter" id="qNumDisplay">1/5</div>
+                <div class="score-box" id="scoreDisplay">🏆 0 pts</div>
+                <div class="player-box" id="playerNameDisplay">Joueur</div>
+            </div>
+            <div class="timer-section">
+                <div class="timer-label" id="timerLabel">⏱️ Temps restant : 20s</div>
+                <div class="timer-bar-bg"><div class="timer-fill" id="timerFill"></div></div>
+            </div>
+            <div class="question-card"><p id="questionText">Chargement...</p></div>
+            <div class="answers-grid" id="answersContainer"></div>
+            <button class="btn-validate" id="validateBtn" disabled>✓ VALIDER MA RÉPONSE</button>
+            <!-- Feedback en overlay en bas -->
+            <div id="feedbackZone"></div>
+        </div>
+
+        <!-- RÉSULTAT -->
+        <div class="panel" id="resultPanel">
+            <div class="result-panel">
+                <div class="result-card" id="resultCard">
+                    <h2 class="result-title">🎯 RÉSULTAT FINAL</h2>
+                    <div class="big-score" id="finalScoreText">0/5</div>
+                    <div class="total-points" id="finalPointsText">0 / 50 points</div>
+                    <div class="grade-badge" id="finalGrade">APPRENTI</div>
+                    <p class="result-message" id="finalMessage"></p>
+                    <div class="result-buttons">
+                        <button class="btn-restart" id="restartBtn">🔄 Recommencer</button>
+                        <button class="btn-next" id="nextBtn">Suivant ➡️</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const quizData = [
+    { q:"💧 Quelle est la première étape de la chaîne énergétique ?", opts:["L'eau qui tombe (énergie cinétique)","L'eau stockée en hauteur (énergie potentielle)","La turbine qui tourne (énergie mécanique)","L'alternateur produit l'électricité"], correct:1, explanation:"L'eau stockée en hauteur possède de l'énergie potentielle, c'est la première étape !" },
+    { q:"🔧 Quel composant transforme l'eau en rotation ?", opts:["La vanne","La conduite forcée","La turbine","L'alternateur"], correct:2, explanation:"La turbine reçoit l'eau et la transforme en mouvement rotatif." },
+    { q:"⚡ À quoi sert une STEP ?", opts:["À produire de l'eau potable","À stocker de l'énergie en pompant l'eau vers le haut","À filtrer l'eau du barrage","À chauffer l'eau pour les maisons"], correct:1, explanation:"La STEP pompe l'eau vers le réservoir haut pour stocker l'énergie !" },
+    { q:"🏞️ Pourquoi le village a-t-il besoin du barrage ?", opts:["Pour l'eau des cultures","Pour les touristes","Pour l'électricité (école, dispensaire)","Pour éviter les inondations"], correct:2, explanation:"Le barrage produit l'électricité nécessaire pour l'école et le dispensaire." },
+    { q:"🔄 Quand on a besoin d'électricité la nuit, que fait la STEP ?", opts:["Elle pompe l'eau vers le haut","Elle laisse l'eau redescendre pour faire tourner la turbine","Elle s'arrête","Elle chauffe l'eau"], correct:1, explanation:"La nuit, la STEP turbine : l'eau descend et produit de l'électricité." }
+];
+
+let currentIdx=0, score=0, points=0, playerName="Joueur";
+let timerInterval=null, secondsLeft=20, isAnswered=false, selectedIdx=null, answerLock=false;
+
+const homePanel=document.getElementById('homePanel');
+const quizPanel=document.getElementById('quizPanel');
+const resultPanel=document.getElementById('resultPanel');
+const playerNameField=document.getElementById('playerNameField');
+const startBtn=document.getElementById('startBtn');
+const restartBtn=document.getElementById('restartBtn');
+const nextBtn=document.getElementById('nextBtn');
+const headerNameDisplay=document.getElementById('headerNameDisplay');
+const playerNameDisplay=document.getElementById('playerNameDisplay');
+const qNumDisplay=document.getElementById('qNumDisplay');
+const scoreDisplay=document.getElementById('scoreDisplay');
+const timerLabel=document.getElementById('timerLabel');
+const timerFill=document.getElementById('timerFill');
+const questionText=document.getElementById('questionText');
+const answersContainer=document.getElementById('answersContainer');
+const validateBtn=document.getElementById('validateBtn');
+const feedbackZone=document.getElementById('feedbackZone');
+const finalScoreText=document.getElementById('finalScoreText');
+const finalPointsText=document.getElementById('finalPointsText');
+const finalMessage=document.getElementById('finalMessage');
+const finalGrade=document.getElementById('finalGrade');
+const resultCard=document.getElementById('resultCard');
+
+function showPanel(p) {
+    [homePanel,quizPanel,resultPanel].forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+}
+
+function startQuiz() {
+    let n=playerNameField.value.trim()||'Joueur';
+    playerName=n;
+    headerNameDisplay.textContent=n;
+    playerNameDisplay.textContent=n;
+    currentIdx=0; score=0; points=0; answerLock=false;
+    showPanel(quizPanel);
+    loadQuestion(0);
+}
+
+function loadQuestion(idx) {
+    isAnswered=false; selectedIdx=null; secondsLeft=20; answerLock=false;
+    qNumDisplay.textContent=`${idx+1}/5`;
+    scoreDisplay.textContent=`🏆 ${points} pts`;
+    timerLabel.textContent='⏱️ Temps restant : 20s';
+    timerFill.style.width='100%';
+    timerFill.style.background='#ffaa33';
+    feedbackZone.innerHTML='';
+
+    const q=quizData[idx];
+    questionText.textContent=q.q;
+    answersContainer.innerHTML='';
+    ['A','B','C','D'].forEach((l,i)=>{
+        const d=document.createElement('div');
+        d.className=`answer-item answer-${l.toLowerCase()}`;
+        d.innerHTML=`<span class="letter-badge">${l}</span><span>${q.opts[i]}</span>`;
+        d.onclick=()=>selectAnswer(i);
+        answersContainer.appendChild(d);
+    });
+    validateBtn.disabled=true;
+    startTimer();
+}
+
+function startTimer() {
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval=setInterval(()=>{
+        if(isAnswered) return;
+        secondsLeft--;
+        timerLabel.textContent=`⏱️ Temps restant : ${secondsLeft}s`;
+        timerFill.style.width=(secondsLeft/20*100)+'%';
+        if(secondsLeft<=5) timerFill.style.background='#e63946';
+        if(secondsLeft<=0){ clearInterval(timerInterval); if(!isAnswered) timeOut(); }
+    },1000);
+}
+
+function selectAnswer(idx) {
+    if(isAnswered||answerLock) return;
+    document.querySelectorAll('.answer-item').forEach(e=>e.classList.remove('selected'));
+    document.querySelectorAll('.answer-item')[idx].classList.add('selected');
+    selectedIdx=idx;
+    validateBtn.disabled=false;
+}
+
+function showFeedback(type, icon, title, expl) {
+    feedbackZone.innerHTML=`
+        <div class="feedback-box feedback-${type}">
+            <div class="feedback-icon">${icon}</div>
+            <div class="feedback-content">
+                <div class="feedback-title">${title}</div>
+                <div class="feedback-expl">${expl}</div>
+            </div>
+        </div>`;
+}
+
+function timeOut() {
+    if(isAnswered) return;
+    isAnswered=true; answerLock=true;
+    clearInterval(timerInterval);
+    document.querySelectorAll('.answer-item').forEach(e=>{e.classList.add('disabled');e.onclick=null;});
+    const q=quizData[currentIdx];
+    showFeedback('timeout','⏰','Temps écoulé !',`La bonne réponse était : ${q.opts[q.correct]}`);
+    validateBtn.disabled=true;
+    setTimeout(()=>{ currentIdx<4 ? loadQuestion(++currentIdx) : showResults(); },2000);
+}
+
+function validateAnswer() {
+    if(isAnswered||selectedIdx===null||answerLock) return;
+    isAnswered=true; answerLock=true;
+    clearInterval(timerInterval);
+    document.querySelectorAll('.answer-item').forEach(e=>{e.classList.add('disabled');e.onclick=null;});
+    const q=quizData[currentIdx];
+    const ok=(selectedIdx===q.correct);
+    document.querySelectorAll('.answer-item')[selectedIdx].classList.add(ok?'correct':'wrong');
+    if(!ok) document.querySelectorAll('.answer-item')[q.correct].classList.add('correct');
+    if(ok){ score++; points+=10; scoreDisplay.textContent=`🏆 ${points} pts`; }
+    showFeedback(
+        ok?'correct':'incorrect',
+        ok?'✅':'❌',
+        ok?'Bravo ! Bonne réponse !':'Oups ! Mauvaise réponse',
+        ok?`+10 points • ${q.explanation}`:q.explanation
+    );
+    validateBtn.disabled=true;
+    setTimeout(()=>{ currentIdx<4 ? loadQuestion(++currentIdx) : showResults(); },2000);
+}
+
+function createConfetti() {
+    for(let i=0;i<40;i++){
+        const c=document.createElement('div');
+        c.className='confetti';
+        c.style.left=Math.random()*100+'%';
+        c.style.animationDelay=Math.random()*2+'s';
+        c.style.background=['#ffaa33','#e63946','#3a86ff','#2a9d8f'][Math.floor(Math.random()*4)];
+        resultCard.appendChild(c);
+    }
+}
+
+function showResults() {
+    clearInterval(timerInterval);
+    finalScoreText.textContent=`${score}/5`;
+    finalPointsText.textContent=`${points} / 50 points`;
+    const grades=[
+        {min:5, cls:'grade-perfect', txt:'🏆 MAÎTRE HYDRAULICIEN', msg:'🎉 Parfait ! Tu es un véritable expert en énergie hydraulique !'},
+        {min:4, cls:'grade-excellent', txt:'⭐ EXPERT', msg:'🌟 Excellent travail ! Encore un petit effort et ce sera parfait !'},
+        {min:3, cls:'grade-good', txt:'💧 APPRENTI', msg:'👍 Bien joué ! Tu maîtrises les bases, continue comme ça !'},
+        {min:0, cls:'grade-retry', txt:'🔄 À REVOIR', msg:'💪 Continue ! Réessaie pour progresser et améliorer ton score !'},
+    ];
+    const g=grades.find(x=>score>=x.min);
+    finalMessage.textContent=g.msg;
+    finalGrade.textContent=g.txt;
+    finalGrade.className=`grade-badge ${g.cls}`;
+    if(score===5) createConfetti();
+    showPanel(resultPanel);
+}
+
+function restartQuiz() {
+    document.querySelectorAll('.confetti').forEach(c=>c.remove());
+    playerNameField.value='Joueur';
+    answerLock=false;
+    showPanel(homePanel);
+}
+
+function goNext() {
+    alert('Bouton Suivant cliqué ! Redirige ici vers la prochaine activité.');
+    // window.parent.postMessage('next','*');  // ← pour Genially
+    // window.location.href = 'page-suivante.html';
+}
+
+startBtn.addEventListener('click', startQuiz);
+restartBtn.addEventListener('click', restartQuiz);
+nextBtn.addEventListener('click', goNext);
+validateBtn.addEventListener('click', validateAnswer);
+playerNameField.addEventListener('keypress', e=>{ if(e.key==='Enter') startQuiz(); });
+</script>
+</body>
+</html>
